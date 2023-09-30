@@ -18,6 +18,7 @@ public class MemAppender extends AppenderSkeleton {
     private Lock lock = new ReentrantLock();
 
     private List<LoggingEvent> loggingEvents = new ArrayList<>();
+    private List<String> loggingEventsString = new ArrayList<>();
 
     private int maxSize;
 
@@ -48,14 +49,18 @@ public class MemAppender extends AppenderSkeleton {
     protected void append(LoggingEvent event) {
         try{
             lock.lock();
+            String data = this.layout.format(event);
             if(currentSize <= maxSize){
                 loggingEvents.add(event);
+                loggingEventsString.add(data);
                 currentSize++;
             }else{
                 discardedLogCount = discardedLogCount + loggingEvents.size();
                 loggingEvents.clear();
+                loggingEventsString.clear();
                 currentSize = 0;
                 loggingEvents.add(event);
+                loggingEventsString.add(data);
                 currentSize++;
             }
         }finally {
@@ -85,8 +90,7 @@ public class MemAppender extends AppenderSkeleton {
     public List<String> getEventStrings(){
         try{
             lock.lock();
-            List<String> eventStrings = loggingEvents.stream().map(e->e.getRenderedMessage()).collect(Collectors.toList());
-            return Collections.unmodifiableList(eventStrings);
+            return Collections.unmodifiableList(loggingEventsString.stream().collect(Collectors.toList()));
         } finally {
             lock.unlock();
         }
@@ -95,8 +99,9 @@ public class MemAppender extends AppenderSkeleton {
     public void printLogs(){
         try{
             lock.lock();
-            loggingEvents.stream().forEach(e-> System.out.println(e.getRenderedMessage()));
+            loggingEventsString.stream().forEach(e-> System.out.println(e));
             loggingEvents.clear();
+            loggingEventsString.clear();
         } finally {
             lock.unlock();
         }

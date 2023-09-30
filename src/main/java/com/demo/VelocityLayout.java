@@ -26,7 +26,7 @@ public class VelocityLayout extends PatternLayout {
      */
     @Override
     public String format(LoggingEvent event) {
-        String pattern = "[%s] %s %s %s: %s %n";
+        String pattern = "[%s] %s %s %s: %s";
         return String.format(pattern, new Date(event.getTimeStamp()).toString(), event.getThreadName(), event.getLevel().toString(), event.getLogger().getName(), event.getRenderedMessage());
     }
 }

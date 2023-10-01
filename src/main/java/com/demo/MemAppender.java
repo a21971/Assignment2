@@ -1,12 +1,9 @@
 package com.demo;
 
 import org.apache.log4j.*;
-import org.apache.log4j.spi.ErrorHandler;
-import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -16,30 +13,32 @@ import java.util.stream.Collectors;
 public class MemAppender extends AppenderSkeleton {
 
     private Lock lock = new ReentrantLock();
-
-    private List<LoggingEvent> loggingEvents = new ArrayList<>();
-    private List<String> loggingEventsString = new ArrayList<>();
-
+    protected List<LoggingEvent> loggingEvents;
     private int maxSize;
-
     private int currentSize = 0;
-
     private long discardedLogCount = 0;
-
     private static MemAppender instance;
 
+    //maxSize customizable for user
     private MemAppender(int maxSize){
         this.maxSize = maxSize;
     }
 
-    public static MemAppender getInstance(int maxSize, Layout layout){
+    /*
+       In memory data holder type and layout are injectable (DI)
+     */
+    public static MemAppender getInstance(int maxSize, List<LoggingEvent> logHolderDataType, Layout layout){
         if(null == instance){
             if(null == layout) {
-                System.out.println("Creating default pattern");
                 layout = new PatternLayout(PatternLayout.DEFAULT_CONVERSION_PATTERN);
             }
             instance = new MemAppender(maxSize);
             instance.setLayout(layout);
+            if(null == logHolderDataType){
+                instance.loggingEvents = new ArrayList<>();
+            }else{
+                instance.loggingEvents = logHolderDataType;
+            }
             return instance;
         }
         return instance;
@@ -49,20 +48,14 @@ public class MemAppender extends AppenderSkeleton {
     protected void append(LoggingEvent event) {
         try{
             lock.lock();
-            String data = this.layout.format(event);
-            if(currentSize <= maxSize){
-                loggingEvents.add(event);
-                loggingEventsString.add(data);
-                currentSize++;
-            }else{
+            this.layout.format(event); //Velocity for logs formatting
+            if (currentSize >= maxSize) {
                 discardedLogCount = discardedLogCount + loggingEvents.size();
                 loggingEvents.clear();
-                loggingEventsString.clear();
                 currentSize = 0;
-                loggingEvents.add(event);
-                loggingEventsString.add(data);
-                currentSize++;
             }
+            loggingEvents.add(event);
+            currentSize++;
         }finally {
             lock.unlock();
         }
@@ -70,7 +63,7 @@ public class MemAppender extends AppenderSkeleton {
 
     @Override
     public void close() {
-
+        //nothing to do
     }
 
     @Override
@@ -90,7 +83,7 @@ public class MemAppender extends AppenderSkeleton {
     public List<String> getEventStrings(){
         try{
             lock.lock();
-            return Collections.unmodifiableList(loggingEventsString.stream().collect(Collectors.toList()));
+            return loggingEvents.stream().map(LoggingEvent::getRenderedMessage).collect(Collectors.toUnmodifiableList());
         } finally {
             lock.unlock();
         }
@@ -99,9 +92,9 @@ public class MemAppender extends AppenderSkeleton {
     public void printLogs(){
         try{
             lock.lock();
-            loggingEventsString.stream().forEach(e-> System.out.println(e));
+            List<String> logs = loggingEvents.stream().map(LoggingEvent::getRenderedMessage).collect(Collectors.toList());
+            logs.forEach(System.out::println);
             loggingEvents.clear();
-            loggingEventsString.clear();
         } finally {
             lock.unlock();
         }

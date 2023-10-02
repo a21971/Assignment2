@@ -1,5 +1,16 @@
+Important Points:
+
 1. Do "mvn clean install" inside the project root folder via command line (that's the script).
-2. Go to /target/site/jacoco/index.html and open in browser.
+2. Go to /target/site/jacoco/index.html and open in browser (to check test coverage).
 3. Don't forget to check sample performance-analysis.pdf in root folder.
 4. In case to generate new analysis, Java VisualVM needs to be installed on the system
    and then execute test cases and monitor VisualVM dashboard.
+5. Go inside com.demo package, you will find two classes:
+    MemAppender: It is the custom appender works with Log4j Logger.
+    VelocityLayout: It is the custom layout works with MemAppender and other Log4j appender.
+6. MemAppender class is a Singleton class. Check getInstance() method of it.
+7. VelocityLayout uses Velocity as template engine. Check format() method of it.
+8. Encourage to visit all Test class files in src/main/test/java/com/demo folder.
+9. Go through each method of each class and do analysis about what each methods are doing.
+10. Highly recommending to write your own custom Junit test cases for creating more use cases.
+11. Check pom.xml in root folder. Have a look on all dependencies and plugins which have been used.
